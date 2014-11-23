@@ -3,6 +3,8 @@ alfred-redmine
 
 An Alfred workflow for accessing a Redmine server
 
+![Screenshot](/workflow/screenshot.png)
+
 Installation
 ------------
 
