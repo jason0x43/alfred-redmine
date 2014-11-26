@@ -178,7 +178,7 @@ func (c ServerCommand) MenuItem() alfred.Item {
 	return alfred.Item{
 		Title:        c.Keyword(),
 		Autocomplete: c.Keyword() + " ",
-		Valid:        alfred.INVALID,
+		Valid:        alfred.Invalid,
 		SubtitleAll:  "Address of your Redmine server",
 	}
 }
@@ -189,13 +189,13 @@ func (c ServerCommand) Items(prefix, query string) (items []alfred.Item, err err
 			items = append(items, alfred.Item{
 				Title:       "Current server",
 				SubtitleAll: config.RedmineUrl,
-				Valid:       alfred.INVALID,
+				Valid:       alfred.Invalid,
 			})
 		} else {
 			items = append(items, alfred.Item{
 				Title:       "Use server at...",
 				SubtitleAll: "Enter a URL",
-				Valid:       alfred.INVALID,
+				Valid:       alfred.Invalid,
 			})
 		}
 	} else {
@@ -274,7 +274,7 @@ func (t TimesheetCommand) Items(prefix, query string) ([]alfred.Item, error) {
 			}
 
 			items = append(items, alfred.Item{
-				Autocomplete: prefix + value + alfred.SEPARATOR + " ",
+				Autocomplete: prefix + value + alfred.Separator + " ",
 				Title:        value,
 				Arg:          "open " + getTimesheetUrl(since, until),
 				Subtitle:     "Generate a report for " + value,
@@ -290,7 +290,7 @@ func (t TimesheetCommand) Items(prefix, query string) ([]alfred.Item, error) {
 		return items, nil
 	} else if len(items) == 0 {
 		items = append(items, alfred.Item{
-			Valid: alfred.INVALID,
+			Valid: alfred.Invalid,
 			Title: "Enter a valid range",
 		})
 		return items, nil
@@ -301,7 +301,7 @@ func (t TimesheetCommand) Items(prefix, query string) ([]alfred.Item, error) {
 	if since != "" && until != "" {
 		var query string
 		if len(parts) > 1 {
-			query = strings.Join(parts[1:], alfred.SEPARATOR+" ")
+			query = strings.Join(parts[1:], alfred.Separator+" ")
 		}
 
 		items, err = createTimesheetItems(prefix+span, query, span, since, until)
@@ -313,7 +313,7 @@ func (t TimesheetCommand) Items(prefix, query string) ([]alfred.Item, error) {
 	if len(items) == 0 {
 		items = append(items, alfred.Item{
 			Title: "No entries",
-			Valid: alfred.INVALID,
+			Valid: alfred.Invalid,
 		})
 	}
 
@@ -373,7 +373,7 @@ func (t IssuesCommand) Items(prefix, query string) ([]alfred.Item, error) {
 
 		item := alfred.Item{
 			Title:    "View all on Redmine",
-			Subtitle: alfred.LINE,
+			Subtitle: alfred.Line,
 			Arg:      "open " + issuesUrl,
 		}
 		items = alfred.InsertItem(items, item, 0)
@@ -424,7 +424,7 @@ func (t ProjectsCommand) Items(prefix, query string) ([]alfred.Item, error) {
 			}
 		}
 
-		prefix := prefix + parts[0] + alfred.SEPARATOR + " "
+		prefix := prefix + parts[0] + alfred.Separator + " "
 		items = append(items, createIssueItems(prefix, parts[1], issues)...)
 	} else {
 		// user has specified a partial project name or no name
@@ -469,7 +469,7 @@ func (t ProjectsCommand) Items(prefix, query string) ([]alfred.Item, error) {
 
 				items = append(items, alfred.Item{
 					Title:        project.Name,
-					Autocomplete: prefix + project.Name + alfred.SEPARATOR + " ",
+					Autocomplete: prefix + project.Name + alfred.Separator + " ",
 					Subtitle:     subTitle,
 					Arg:          "open " + fmt.Sprintf("%s/projects/%v/issues", config.RedmineUrl, project.Id)})
 			}
@@ -486,7 +486,7 @@ func (t ProjectsCommand) Items(prefix, query string) ([]alfred.Item, error) {
 			if ok && alfred.FuzzyMatches(project.Name, query) {
 				items = append(items, alfred.Item{
 					Title:        project.Name,
-					Autocomplete: prefix + project.Name + alfred.SEPARATOR + " ",
+					Autocomplete: prefix + project.Name + alfred.Separator + " ",
 					Arg:          "open " + fmt.Sprintf("%s/projects/%v/issues", config.RedmineUrl, project.Id)})
 			}
 		}
@@ -511,7 +511,7 @@ func (t SyncCommand) MenuItem() alfred.Item {
 	return alfred.Item{
 		Title:        t.Keyword(),
 		Autocomplete: t.Keyword(),
-		Valid:        alfred.INVALID,
+		Valid:        alfred.Invalid,
 		Subtitle:     "Sync with your Redmine server",
 	}
 }
@@ -528,6 +528,7 @@ func (t SyncCommand) Items(prefix, query string) ([]alfred.Item, error) {
 func createIssueItems(prefix, query string, issues []redmine.Issue) []alfred.Item {
 	sort.Sort(byDueDate(issues))
 	sort.Stable(sort.Reverse(byPriority(issues)))
+	sort.Stable(byAssignment(issues))
 
 	var items []alfred.Item
 
@@ -539,14 +540,20 @@ func createIssueItems(prefix, query string, issues []redmine.Issue) []alfred.Ite
 				dueDate, _ := time.Parse("2006-01-02", issue.DueDate)
 				subTitle += ", due " + toHumanDateString(dueDate)
 			}
-
 			subTitle += ", " + issue.Priority.Name
 
-			items = append(items, alfred.Item{
+			item := alfred.Item{
 				Title:        issue.Subject,
 				Subtitle:     subTitle,
 				Autocomplete: prefix + issue.Subject,
-				Arg:          "open " + fmt.Sprintf("%s/issues/%v", config.RedmineUrl, issue.Id)})
+				Arg:          "open " + fmt.Sprintf("%s/issues/%v", config.RedmineUrl, issue.Id),
+			}
+
+			if issue.AssignedTo.Id == cache.User.Id {
+				item.Icon = "icon_me.png"
+			}
+
+			items = append(items, item)
 		}
 	}
 
@@ -788,7 +795,7 @@ func createTimesheetItems(prefix, query, span, since, until string) ([]alfred.It
 			for _, issue := range project.issues {
 				if alfred.FuzzyMatches(issue.name, issueQuery) {
 					items = append(items, alfred.Item{
-						Autocomplete: prefix + alfred.SEPARATOR + " " + project.name + alfred.SEPARATOR + " " + issue.name,
+						Autocomplete: prefix + alfred.Separator + " " + project.name + alfred.Separator + " " + issue.name,
 						Title:        issue.name,
 						Arg:          "open|" + session.IssueUrl(*issue.issue),
 						Subtitle:     fmt.Sprintf("%.2f", issue.total)})
@@ -809,8 +816,8 @@ func createTimesheetItems(prefix, query, span, since, until string) ([]alfred.It
 				entryTitle := project.name
 
 				item := alfred.Item{
-					Valid:        alfred.INVALID,
-					Autocomplete: prefix + alfred.SEPARATOR + " " + entryTitle + alfred.SEPARATOR + " ",
+					Valid:        alfred.Invalid,
+					Autocomplete: prefix + alfred.Separator + " " + entryTitle + alfred.Separator + " ",
 					Title:        entryTitle,
 					Subtitle:     fmt.Sprintf("%.2f", project.total)}
 
@@ -837,7 +844,7 @@ func createTimesheetItems(prefix, query, span, since, until string) ([]alfred.It
 				Title:        fmt.Sprintf("Total hours %s: %.2f", totalName, total),
 				Arg:          "open " + getTimesheetUrl(since, until),
 				Autocomplete: query,
-				Subtitle:     alfred.LINE,
+				Subtitle:     alfred.Line,
 			}
 			items = alfred.InsertItem(items, item, 0)
 		}
@@ -1064,6 +1071,23 @@ func (b byDueDate) Swap(i, j int) {
 
 func (b byDueDate) Less(i, j int) bool {
 	return dueDateIsBefore(&b[i], &b[j])
+}
+
+type byAssignment []redmine.Issue
+
+func (b byAssignment) Len() int {
+	return len(b)
+}
+
+func (b byAssignment) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
+func (b byAssignment) Less(i, j int) bool {
+	if b[i].AssignedTo.Id == cache.User.Id && b[j].AssignedTo.Id != cache.User.Id {
+		return true
+	}
+	return false
 }
 
 type byPriority []redmine.Issue
