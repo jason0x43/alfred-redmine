@@ -57,9 +57,9 @@ func main() {
 		TimesheetCommand{},
 		SyncCommand{},
 		OpenAction{},
-		ServerCommand{},
 		LoginCommand{},
 		LogoutCommand{},
+		ServerCommand{},
 	}
 
 	workflow.Run(commands)
@@ -111,7 +111,8 @@ func (c LoginCommand) Do(query string) (string, error) {
 
 	session, err := redmine.NewSession(config.RedmineUrl, username, password)
 	if err != nil {
-		return "", err
+		workflow.ShowMessage(fmt.Sprintf("Login failed: %s", err))
+		return "", nil
 	}
 
 	config.ApiKey = session.ApiKey()
@@ -171,7 +172,7 @@ func (c ServerCommand) Keyword() string {
 }
 
 func (c ServerCommand) IsEnabled() bool {
-	return config.RedmineUrl != ""
+	return true
 }
 
 func (c ServerCommand) MenuItem() alfred.Item {
