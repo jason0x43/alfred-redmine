@@ -24,7 +24,7 @@ type Config struct {
 
 type Cache struct {
 	Time          time.Time
-	User          *redmine.User
+	User          redmine.User
 	Issues        []redmine.Issue
 	IssueStatuses []redmine.IssueStatus
 	Projects      []redmine.Project

@@ -84,7 +84,7 @@ func refresh() error {
 		select {
 		case data := <-dataChan:
 			switch value := data.(type) {
-			case *redmine.User:
+			case redmine.User:
 				cache.User = value
 				log.Println("Got users")
 			case []redmine.Issue:

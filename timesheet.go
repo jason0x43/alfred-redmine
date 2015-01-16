@@ -179,7 +179,7 @@ func generateTimesheet(since, until string) (timesheet, error) {
 }
 
 func getMissingIssues() error {
-	issueChan := make(chan *redmine.Issue)
+	issueChan := make(chan redmine.Issue)
 	errorChan := make(chan error)
 
 	var ids []int
@@ -217,7 +217,7 @@ func getMissingIssues() error {
 	for _ = range toGet {
 		select {
 		case issue := <-issueChan:
-			cache.Issues = append(cache.Issues, *issue)
+			cache.Issues = append(cache.Issues, issue)
 			log.Println("appended issue", issue.Id)
 		case err := <-errorChan:
 			return err
