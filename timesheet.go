@@ -18,7 +18,7 @@ func (t TimesheetCommand) Keyword() string {
 }
 
 func (c TimesheetCommand) IsEnabled() bool {
-	return config.ApiKey != ""
+	return config.ApiKey != "" && cache.User.Id != 0
 }
 
 func (t TimesheetCommand) MenuItem() alfred.Item {
