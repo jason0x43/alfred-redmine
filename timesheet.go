@@ -35,7 +35,7 @@ func (t TimesheetCommand) Items(prefix, query string) ([]alfred.Item, error) {
 	var until string
 	var span string
 
-	parts := alfred.SplitQuery(query)
+	parts := strings.Split(query, alfred.Separator)
 
 	for _, value := range []string{"today", "yesterday", "this week"} {
 		if alfred.FuzzyMatches(value, parts[0]) {
@@ -234,7 +234,7 @@ func getMissingIssues() error {
 
 func createTimesheetItems(prefix, query, span, since, until string) ([]alfred.Item, error) {
 	var items []alfred.Item
-	parts := alfred.SplitAndTrimQuery(query)
+	parts := alfred.TrimAllLeft(strings.Split(query, alfred.Separator))
 
 	timesheet, err := generateTimesheet(since, until)
 	if err != nil {

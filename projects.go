@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/jason0x43/go-alfred"
@@ -30,7 +31,7 @@ func (t ProjectsCommand) MenuItem() alfred.Item {
 func (t ProjectsCommand) Items(prefix, query string) ([]alfred.Item, error) {
 	var items []alfred.Item
 
-	parts := alfred.SplitAndTrimQuery(query)
+	parts := alfred.TrimAllLeft(strings.Split(query, alfred.Separator))
 	if len(parts) > 1 {
 		// user has specified a project name
 

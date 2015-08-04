@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"time"
 
 	"github.com/jason0x43/go-alfred"
@@ -15,7 +16,7 @@ var cacheFile string
 var configFile string
 var config Config
 var cache Cache
-var workflow *alfred.Workflow
+var workflow alfred.Workflow
 
 type Config struct {
 	ApiKey     string
@@ -33,6 +34,8 @@ type Cache struct {
 
 func main() {
 	var err error
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	workflow, err = alfred.OpenWorkflow(".", true)
 	if err != nil {

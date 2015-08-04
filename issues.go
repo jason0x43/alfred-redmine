@@ -7,6 +7,7 @@ import (
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jason0x43/go-alfred"
@@ -38,7 +39,7 @@ func (t IssuesCommand) MenuItem() alfred.Item {
 }
 
 func (t IssuesCommand) Items(prefix, query string) (items []alfred.Item, err error) {
-	parts := alfred.SplitAndTrimQuery(query)
+	parts := alfred.TrimAllLeft(strings.Split(query, alfred.Separator))
 	log.Printf("parts: %s", parts)
 
 	if len(parts) > 1 {
