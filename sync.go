@@ -2,30 +2,23 @@ package main
 
 import "github.com/jason0x43/go-alfred"
 
+// SyncCommand is a command
 type SyncCommand struct{}
 
-func (t SyncCommand) Keyword() string {
-	return "sync"
-}
-
-func (c SyncCommand) IsEnabled() bool {
-	return config.ApiKey != ""
-}
-
-func (t SyncCommand) MenuItem() alfred.Item {
-	return alfred.Item{
-		Title:        t.Keyword(),
-		Autocomplete: t.Keyword(),
-		Valid:        alfred.Invalid,
-		Subtitle:     "Sync with your Redmine server",
+// About returns information about a command
+func (c SyncCommand) About() alfred.CommandDef {
+	return alfred.CommandDef{
+		Keyword:     "sync",
+		Description: "Sync with your Redmine server",
+		IsEnabled:   config.APIKey != "",
 	}
 }
 
-func (t SyncCommand) Items(prefix, query string) ([]alfred.Item, error) {
-	err := refresh()
-	if err != nil {
-		return []alfred.Item{}, err
+// Items returns a list of filter items
+func (c SyncCommand) Items(arg, data string) (items []alfred.Item, err error) {
+	if err = refresh(); err != nil {
+		return
 	}
-
-	return []alfred.Item{alfred.Item{Title: "Synchronized!"}}, nil
+	items = append(items, alfred.Item{Title: "Synchronized!"})
+	return
 }

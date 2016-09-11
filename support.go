@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jason0x43/go-alfred"
-	"github.com/jason0x43/go-redmine"
 )
 
 func checkRefresh() error {
@@ -27,7 +26,7 @@ func refresh() error {
 	dataChan := make(chan interface{})
 	errorChan := make(chan error)
 
-	session := redmine.OpenSession(config.RedmineUrl, config.ApiKey)
+	session := OpenSession(config.RedmineURL, config.APIKey)
 
 	log.Println("Getting user...")
 	go func() {
@@ -84,19 +83,19 @@ func refresh() error {
 		select {
 		case data := <-dataChan:
 			switch value := data.(type) {
-			case redmine.User:
+			case User:
 				cache.User = value
 				log.Println("Got users")
-			case []redmine.Issue:
+			case []Issue:
 				cache.Issues = value
 				log.Println("Got issues")
-			case []redmine.IssueStatus:
+			case []IssueStatus:
 				cache.IssueStatuses = value
 				log.Println("Got issue statuses")
-			case []redmine.Project:
+			case []Project:
 				cache.Projects = value
 				log.Println("Got projects")
-			case []redmine.TimeEntry:
+			case []TimeEntry:
 				cache.TimeEntries = value
 				log.Println("Got time entries")
 			}
@@ -106,7 +105,7 @@ func refresh() error {
 	}
 
 	cache.Time = time.Now()
-	err := alfred.SaveJson(cacheFile, &cache)
+	err := alfred.SaveJSON(cacheFile, &cache)
 	if err != nil {
 		log.Printf("Error writing cache: %s", err)
 	}
@@ -114,7 +113,7 @@ func refresh() error {
 	return nil
 }
 
-func indexOfByName(list ListInterface, name string) int {
+func indexOfByName(list listInterface, name string) int {
 	name = strings.ToLower(name)
 	for i := 0; i < list.Len(); i++ {
 		if strings.ToLower(list.Name(i)) == name {
@@ -124,62 +123,62 @@ func indexOfByName(list ListInterface, name string) int {
 	return -1
 }
 
-func indexOfById(list ListInterface, id int) int {
+func indexOfByID(list listInterface, id int) int {
 	for i := 0; i < list.Len(); i++ {
-		if list.Id(i) == id {
+		if list.ID(i) == id {
 			return i
 		}
 	}
 	return -1
 }
 
-type ListInterface interface {
+type listInterface interface {
 	Len() int
 	Name(index int) string
-	Id(index int) int
+	ID(index int) int
 }
 
-type ProjectList []*timesheetProject
+type tsProjectList []timesheetProject
 
-func (l ProjectList) Len() int {
+func (l tsProjectList) Len() int {
 	return len(l)
 }
-func (l ProjectList) Name(index int) string {
+func (l tsProjectList) Name(index int) string {
 	return l[index].name
 }
-func (l ProjectList) Id(index int) int {
+func (l tsProjectList) ID(index int) int {
 	return l[index].id
 }
 
-type RmProjectList []redmine.Project
+type projectList []Project
 
-func (l RmProjectList) Len() int {
+func (l projectList) Len() int {
 	return len(l)
 }
-func (l RmProjectList) Name(index int) string {
+func (l projectList) Name(index int) string {
 	return l[index].Name
 }
-func (l RmProjectList) Id(index int) int {
-	return l[index].Id
+func (l projectList) ID(index int) int {
+	return l[index].ID
 }
 
-type IssueList []redmine.Issue
+type issueList []Issue
 
-func (l IssueList) Len() int {
+func (l issueList) Len() int {
 	return len(l)
 }
-func (l IssueList) Name(index int) string {
+func (l issueList) Name(index int) string {
 	return l[index].Description
 }
-func (l IssueList) Id(index int) int {
-	return l[index].Id
+func (l issueList) ID(index int) int {
+	return l[index].ID
 }
 
-func getClosedStatusIds() map[int]bool {
+func getClosedStatusIDs() map[int]bool {
 	closed := map[int]bool{}
 	for _, status := range cache.IssueStatuses {
 		if status.IsClosed {
-			closed[status.Id] = true
+			closed[status.ID] = true
 		}
 	}
 	return closed
@@ -206,9 +205,8 @@ func toHumanDateString(date time.Time) string {
 		return "next " + date.Weekday().String()
 	} else if isDateBefore(date, today.AddDate(1, 0, 0)) {
 		return date.Format("Jan 2")
-	} else {
-		return toIsoDateString(date)
 	}
+	return toIsoDateString(date)
 }
 
 // is date1's date before date2's date
@@ -244,17 +242,17 @@ func isNextWeek(date1 time.Time, date2 time.Time) bool {
 	return y1 == y2 && w1 == w2+1
 }
 
-func dueDateIsBefore(i, j *redmine.Issue) bool {
-	if i.DueDate == "" {
+func dueDateIsBefore(i, j string) bool {
+	if i == "" {
 		return false
 	}
-	if j.DueDate == "" {
+	if j == "" {
 		return true
 	}
-	return i.DueDate < j.DueDate
+	return i < j
 }
 
-type byDueDate []redmine.Issue
+type byDueDate []Issue
 
 func (b byDueDate) Len() int {
 	return len(b)
@@ -265,10 +263,10 @@ func (b byDueDate) Swap(i, j int) {
 }
 
 func (b byDueDate) Less(i, j int) bool {
-	return dueDateIsBefore(&b[i], &b[j])
+	return dueDateIsBefore(b[i].DueDate, b[j].DueDate)
 }
 
-type byAssignment []redmine.Issue
+type byAssignment []Issue
 
 func (b byAssignment) Len() int {
 	return len(b)
@@ -279,13 +277,13 @@ func (b byAssignment) Swap(i, j int) {
 }
 
 func (b byAssignment) Less(i, j int) bool {
-	if b[i].AssignedTo.Id == cache.User.Id && b[j].AssignedTo.Id != cache.User.Id {
+	if b[i].AssignedTo.ID == cache.User.ID && b[j].AssignedTo.ID != cache.User.ID {
 		return true
 	}
 	return false
 }
 
-type byPriority []redmine.Issue
+type byPriority []Issue
 
 func (b byPriority) Len() int {
 	return len(b)
@@ -296,5 +294,5 @@ func (b byPriority) Swap(i, j int) {
 }
 
 func (b byPriority) Less(i, j int) bool {
-	return b[i].Priority.Id < b[j].Priority.Id
+	return b[i].Priority.ID < b[j].Priority.ID
 }

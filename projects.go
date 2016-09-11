@@ -1,122 +1,158 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
-	"strings"
+	"os/exec"
 	"time"
 
 	"github.com/jason0x43/go-alfred"
-	"github.com/jason0x43/go-redmine"
 )
 
+// ProjectsCommand is a command
 type ProjectsCommand struct{}
 
-func (t ProjectsCommand) Keyword() string {
-	return "projects"
-}
-
-func (c ProjectsCommand) IsEnabled() bool {
-	return config.ApiKey != ""
-}
-
-func (t ProjectsCommand) MenuItem() alfred.Item {
-	return alfred.Item{
-		Title:        t.Keyword(),
-		Autocomplete: t.Keyword() + " ",
-		Subtitle:     "List the projects you're working on",
+// About returns information about a command
+func (c ProjectsCommand) About() alfred.CommandDef {
+	return alfred.CommandDef{
+		Keyword:     projectsKeyword,
+		Description: "List the projects you're working on",
+		IsEnabled:   config.APIKey != "",
 	}
 }
 
-func (t ProjectsCommand) Items(prefix, query string) ([]alfred.Item, error) {
-	var items []alfred.Item
-
-	parts := alfred.TrimAllLeft(strings.Split(query, alfred.Separator))
-	if len(parts) > 1 {
-		// user has specified a project name
-
-		projName := parts[0]
-		pi := indexOfByName(RmProjectList(cache.Projects), projName)
-		if pi == -1 {
-			return []alfred.Item{}, fmt.Errorf("Invalid project %d", projName)
-		}
-
-		project := cache.Projects[pi]
-
-		var issues []redmine.Issue
-		for _, issue := range cache.Issues {
-			if issue.Project.Id == project.Id {
-				issues = append(issues, issue)
-			}
-		}
-
-		prefix := prefix + parts[0] + alfred.Separator + " "
-		items = append(items, createIssueItems(prefix, parts[1], issues)...)
-	} else {
-		// user has specified a partial project name or no name
-		log.Println("Listing all user projects")
-
-		// first, filter all projects based on my open issues
-		projects := map[int]*redmine.Issue{}
-		activeProjects := map[int]bool{}
-		issueCounts := map[int]int{}
-		closed := getClosedStatusIds()
-
-		for i := range cache.Issues {
-			issue := &cache.Issues[i]
-			if _, ok := closed[issue.Status.Id]; !ok {
-				// projects with at least one non-closed issue are "active"
-				activeProjects[issue.Project.Id] = true
-			}
-
-			existing, ok := projects[issue.Project.Id]
-			if !ok || dueDateIsBefore(issue, existing) {
-				// store the project with the soonest due date in the projects list
-				projects[issue.Project.Id] = issue
-			}
-
-			issueCounts[issue.Project.Id]++
-		}
-
-		// First, add the projects with active issues
-		for _, project := range cache.Projects {
-			if _, ok := activeProjects[project.Id]; !ok {
-				// skip inactive projects
-				continue
-			}
-
-			p, ok := projects[project.Id]
-			if ok && alfred.FuzzyMatches(project.Name, query) {
-				subTitle := fmt.Sprintf("%d issues", issueCounts[project.Id])
-				if p.DueDate != "" {
-					dueDate, _ := time.Parse("2006-01-02", p.DueDate)
-					subTitle += ", first is due " + toHumanDateString(dueDate)
-				}
-
-				items = append(items, alfred.Item{
-					Title:        project.Name,
-					Autocomplete: prefix + project.Name + alfred.Separator + " ",
-					Subtitle:     subTitle,
-					Arg:          "open " + fmt.Sprintf("%s/projects/%v/issues", config.RedmineUrl, project.Id)})
-			}
-		}
-
-		// Next, add the projects that recently had active issues
-		for _, project := range cache.Projects {
-			if _, ok := activeProjects[project.Id]; ok {
-				// skip active projects
-				continue
-			}
-
-			_, ok := projects[project.Id]
-			if ok && alfred.FuzzyMatches(project.Name, query) {
-				items = append(items, alfred.Item{
-					Title:        project.Name,
-					Autocomplete: prefix + project.Name + alfred.Separator + " ",
-					Arg:          "open " + fmt.Sprintf("%s/projects/%v/issues", config.RedmineUrl, project.Id)})
-			}
+// Items returns a list of filter items
+func (c ProjectsCommand) Items(arg, data string) (items []alfred.Item, err error) {
+	var cfg projectCfg
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &cfg); err != nil {
+			dlog.Printf("Invalid issue config")
 		}
 	}
 
-	return items, nil
+	if err = checkRefresh(); err != nil {
+		return
+	}
+
+	// first, filter all projects based on user's open issues
+	projects := map[int]Issue{}
+	activeProjects := map[int]bool{}
+	issueCounts := map[int]int{}
+	closed := getClosedStatusIDs()
+
+	for i := range cache.Issues {
+		issue := cache.Issues[i]
+		if _, ok := closed[issue.Status.ID]; !ok {
+			// projects with at least one non-closed issue are "active"
+			activeProjects[issue.Project.ID] = true
+		}
+
+		if existing, ok := projects[issue.Project.ID]; !ok || dueDateIsBefore(issue.DueDate, existing.DueDate) {
+			// store the project with the soonest due date in the projects list
+			projects[issue.Project.ID] = issue
+		}
+
+		issueCounts[issue.Project.ID]++
+	}
+
+	// First, add the projects with active issues
+	for _, project := range cache.Projects {
+		if _, ok := activeProjects[project.ID]; !ok {
+			// skip inactive projects
+			continue
+		}
+
+		if p, ok := projects[project.ID]; ok && alfred.FuzzyMatches(project.Name, arg) {
+			subTitle := fmt.Sprintf("%d issues", issueCounts[project.ID])
+			if p.DueDate != "" {
+				dueDate, _ := time.Parse("2006-01-02", p.DueDate)
+				subTitle += ", first is due " + toHumanDateString(dueDate)
+			}
+
+			item := alfred.Item{
+				UID:          fmt.Sprintf("redmineproject-%d", project.ID),
+				Title:        project.Name,
+				Autocomplete: project.Name,
+				Subtitle:     subTitle,
+				Arg: &alfred.ItemArg{
+					Keyword: issuesKeyword,
+					Data:    alfred.Stringify(&issueCfg{ProjectID: &project.ID}),
+				},
+			}
+
+			item.AddMod(alfred.ModAlt, alfred.ItemMod{
+				Subtitle: "Open this project in Redmine",
+				Arg: &alfred.ItemArg{
+					Keyword: projectsKeyword,
+					Mode:    alfred.ModeDo,
+					Data:    alfred.Stringify(&projectCfg{ToOpen: getProjectURL(project.ID)}),
+				},
+			})
+
+			items = append(items, item)
+		}
+	}
+
+	// Next, add the projects that recently had active issues
+	for _, project := range cache.Projects {
+		if _, ok := activeProjects[project.ID]; ok {
+			// skip active projects
+			continue
+		}
+
+		if _, ok := projects[project.ID]; ok && alfred.FuzzyMatches(project.Name, arg) {
+			item := alfred.Item{
+				UID:          fmt.Sprintf("redmineproject-%d", project.ID),
+				Title:        project.Name,
+				Autocomplete: project.Name,
+				Arg: &alfred.ItemArg{
+					Keyword: issuesKeyword,
+					Data:    alfred.Stringify(&issueCfg{ProjectID: &project.ID}),
+				},
+			}
+
+			item.AddMod(alfred.ModAlt, alfred.ItemMod{
+				Subtitle: "Open this project in Redmine",
+				Arg: &alfred.ItemArg{
+					Keyword: projectsKeyword,
+					Mode:    alfred.ModeDo,
+					Data:    alfred.Stringify(&projectCfg{ToOpen: getProjectURL(project.ID)}),
+				},
+			})
+
+			items = append(items, item)
+		}
+	}
+
+	return
+}
+
+// Do runs the command
+func (c ProjectsCommand) Do(data string) (out string, err error) {
+	var cfg projectCfg
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &cfg); err != nil {
+			return "", fmt.Errorf("Invalid project config")
+		}
+	}
+
+	if cfg.ToOpen != "" {
+		err = exec.Command("open", cfg.ToOpen).Run()
+	}
+
+	return
+}
+
+// support -------------------------------------------------------------------
+
+const projectsKeyword = "projects"
+
+type projectCfg struct {
+	ProjectID *int
+	ToOpen    string
+}
+
+func getProjectURL(pid int) string {
+	// return fmt.Sprintf("%s/projects/%v/issues", config.RedmineURL, pid)
+	return fmt.Sprintf("%s/projects/%v", config.RedmineURL, pid)
 }

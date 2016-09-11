@@ -2,38 +2,29 @@ package main
 
 import "github.com/jason0x43/go-alfred"
 
+// LogoutCommand is a command
 type LogoutCommand struct{}
 
-func (c LogoutCommand) Keyword() string {
-	return "logout"
-}
-
-func (c LogoutCommand) IsEnabled() bool {
-	return config.ApiKey != ""
-}
-
-func (c LogoutCommand) MenuItem() alfred.Item {
-	return alfred.Item{
-		Title:        c.Keyword(),
-		Autocomplete: c.Keyword(),
-		Arg:          "logout",
-		SubtitleAll:  "Logout of your Redmine server",
+// About returns information about a command
+func (c LogoutCommand) About() alfred.CommandDef {
+	return alfred.CommandDef{
+		Keyword:     "logout",
+		Description: "Logout of your Redmine server",
+		IsEnabled:   config.APIKey != "",
+		Arg: &alfred.ItemArg{
+			Keyword: "logout",
+			Mode:    alfred.ModeDo,
+		},
 	}
 }
 
-func (c LogoutCommand) Items(prefix, query string) ([]alfred.Item, error) {
-	item := c.MenuItem()
-	item.Arg = "logout"
-	return []alfred.Item{item}, nil
-}
-
-func (c LogoutCommand) Do(query string) (string, error) {
-	config.ApiKey = ""
-	err := alfred.SaveJson(configFile, &config)
-	if err != nil {
-		return "", err
+// Do runs the command
+func (c LogoutCommand) Do(data string) (out string, err error) {
+	config.APIKey = ""
+	if err = alfred.SaveJSON(configFile, &config); err != nil {
+		return
 	}
 
 	workflow.ShowMessage("Logout successful!")
-	return "", nil
+	return
 }

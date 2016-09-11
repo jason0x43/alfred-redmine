@@ -1,120 +1,106 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os/exec"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/jason0x43/go-alfred"
-	"github.com/jason0x43/go-redmine"
 )
 
+// TimesheetCommand is a command
 type TimesheetCommand struct{}
 
-func (t TimesheetCommand) Keyword() string {
-	return "timesheet"
-}
-
-func (c TimesheetCommand) IsEnabled() bool {
-	return config.ApiKey != "" && cache.User.Id != 0
-}
-
-func (t TimesheetCommand) MenuItem() alfred.Item {
-	return alfred.Item{
-		Title:        t.Keyword(),
-		Autocomplete: t.Keyword() + " ",
-		Subtitle:     "Generate a timesheet",
+// About returns information about a command
+func (c TimesheetCommand) About() alfred.CommandDef {
+	return alfred.CommandDef{
+		Keyword:     timesheetKeyword,
+		Description: "Generate a timesheet",
+		IsEnabled:   config.APIKey != "" && cache.User.ID != 0,
 	}
 }
 
-func (t TimesheetCommand) Items(prefix, query string) ([]alfred.Item, error) {
-	var items []alfred.Item
-	var since string
-	var until string
-	var span string
+// Items returns a list of filter items
+func (c TimesheetCommand) Items(arg, data string) (items []alfred.Item, err error) {
+	var cfg timesheetCfg
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &cfg); err != nil {
+			dlog.Printf("Invalid timesheet config")
+		}
+	}
 
-	parts := strings.Split(query, alfred.Separator)
+	var span span
 
-	for _, value := range []string{"today", "yesterday", "this week"} {
-		if alfred.FuzzyMatches(value, parts[0]) {
-			switch value {
-			case "today":
-				since = toIsoDateString(time.Now())
-				until = since
-			case "yesterday":
-				since = toIsoDateString(time.Now().AddDate(0, 0, -1))
-				until = since
-			case "this week":
-				start := time.Now()
-				if start.Weekday() > 0 {
-					delta := 1 - int(start.Weekday())
-					since = toIsoDateString(start.AddDate(0, 0, delta))
-					until = toIsoDateString(time.Now())
-				}
+	if cfg.Span != nil {
+		span = *cfg.Span
+		if items, err = createTimesheetItems(arg, span); err != nil {
+			return
+		}
+	} else {
+		for _, value := range []string{"today", "yesterday", "week"} {
+			if alfred.FuzzyMatches(value, arg) {
+				span, _ := getSpan(value)
+				items = append(items, createTimesheetItem(span))
 			}
-
-			items = append(items, alfred.Item{
-				Autocomplete: prefix + value + alfred.Separator + " ",
-				Title:        value,
-				Arg:          "open " + getTimesheetUrl(since, until),
-				Subtitle:     "Generate a report for " + value,
-			})
 		}
 
-		if value == parts[0] {
-			span = parts[0]
-		}
-	}
-
-	if span == "" {
-		return items, nil
-	} else if len(items) == 0 {
-		items = append(items, alfred.Item{
-			Valid: alfred.Invalid,
-			Title: "Enter a valid range",
-		})
-		return items, nil
-	}
-
-	var err error
-
-	if since != "" && until != "" {
-		var query string
-		if len(parts) > 1 {
-			query = strings.Join(parts[1:], alfred.Separator+" ")
-		}
-
-		items, err = createTimesheetItems(prefix+span, query, span, since, until)
-		if err != nil {
-			return []alfred.Item{}, err
+		if matched, _ := regexp.MatchString(`^\d`, arg); matched {
+			if span, err = getSpan(arg); err == nil {
+				items = append(items, createTimesheetItem(span))
+			}
 		}
 	}
 
 	if len(items) == 0 {
 		items = append(items, alfred.Item{
 			Title: "No entries",
-			Valid: alfred.Invalid,
 		})
 	}
 
-	return items, nil
+	return
+}
+
+// Do runs the command
+func (c TimesheetCommand) Do(data string) (out string, err error) {
+	var cfg timesheetCfg
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &cfg); err != nil {
+			return "", fmt.Errorf("Invalid issue config")
+		}
+	}
+
+	if cfg.ToOpen != "" {
+		err = exec.Command("open", cfg.ToOpen).Run()
+	}
+
+	return
 }
 
 // support -------------------------------------------------------------
 
+const timesheetKeyword = "timesheet"
+
+type timesheetCfg struct {
+	ToOpen string
+	Span   *span
+}
+
 type timesheetIssue struct {
 	total float64
 	name  string
-	issue *redmine.Issue
+	issue *Issue
 }
 
 type timesheetProject struct {
 	total   float64
 	name    string
 	id      int
-	project *redmine.Project
+	project *Project
 	issues  []*timesheetIssue
 }
 
@@ -123,49 +109,84 @@ type timesheet struct {
 	projects []*timesheetProject
 }
 
-func generateTimesheet(since, until string) (timesheet, error) {
-	log.Printf("generating timesheet from %s to %s", since, until)
-	timesheet := timesheet{projects: []*timesheetProject{}}
+type span struct {
+	Name  string
+	Label string
+	From  string
+	To    string
+}
+
+func createTimesheetItem(span span) (item alfred.Item) {
+	label := span.Name
+	if span.Label != "" {
+		label = span.Label
+	}
+
+	item = alfred.Item{
+		Autocomplete: label,
+		Title:        label,
+		Subtitle:     "Generate a timesheet for " + label,
+		Arg: &alfred.ItemArg{
+			Keyword: timesheetKeyword,
+			Data:    alfred.Stringify(&timesheetCfg{Span: &span}),
+		},
+	}
+
+	item.AddMod(alfred.ModAlt, alfred.ItemMod{
+		Subtitle: "Open the timesheet for " + label,
+		Arg: &alfred.ItemArg{
+			Keyword: timesheetKeyword,
+			Mode:    alfred.ModeDo,
+			Data:    alfred.Stringify(&timesheetCfg{ToOpen: getTimesheetURL(span)}),
+		},
+	})
+
+	return
+}
+
+func generateTimesheet(span span) (timesheet timesheet, err error) {
+	log.Printf("generating timesheet from %s to %s", span.From, span.To)
+
 	projects := map[int]*timesheetProject{}
 	issues := map[int]*timesheetIssue{}
 
-	err := getMissingIssues()
-	if err != nil {
-		return timesheet, err
+	if err = getMissingIssues(); err != nil {
+		return
 	}
 
 	for i := range cache.TimeEntries {
 		entry := &cache.TimeEntries[i]
 
-		if entry.SpentOn >= since && entry.SpentOn <= until {
+		if entry.SpentOn >= span.From && entry.SpentOn <= span.To {
 			var project *timesheetProject
 			var issue *timesheetIssue
 			var ok bool
 
-			if project, ok = projects[entry.Project.Id]; !ok {
+			if project, ok = projects[entry.Project.ID]; !ok {
 				project = &timesheetProject{
 					name:   entry.Project.Name,
-					id:     entry.Project.Id,
+					id:     entry.Project.ID,
 					issues: []*timesheetIssue{},
 				}
-				projects[entry.Project.Id] = project
-				timesheet.projects = append(timesheet.projects, project)
 
-				idx := indexOfById(RmProjectList(cache.Projects), entry.Project.Id)
-				if idx == -1 {
-					log.Printf("Missing project %v", entry.Project.Id)
+				if idx := indexOfByID(projectList(cache.Projects), entry.Project.ID); idx == -1 {
+					log.Printf("Missing project %v", entry.Project.ID)
+				} else {
+					project.project = &cache.Projects[idx]
 				}
-				project.project = &cache.Projects[idx]
+
+				projects[entry.Project.ID] = project
+				timesheet.projects = append(timesheet.projects, project)
 			}
 
-			if issue, ok = issues[entry.Issue.Id]; !ok {
-				idx := indexOfById(IssueList(cache.Issues), entry.Issue.Id)
+			if issue, ok = issues[entry.Issue.ID]; !ok {
+				idx := indexOfByID(issueList(cache.Issues), entry.Issue.ID)
 				ri := cache.Issues[idx]
 				issue = &timesheetIssue{
 					name:  ri.Subject,
 					issue: &ri,
 				}
-				issues[entry.Issue.Id] = issue
+				issues[entry.Issue.ID] = issue
 				project.issues = append(project.issues, issue)
 			}
 
@@ -175,33 +196,50 @@ func generateTimesheet(since, until string) (timesheet, error) {
 		}
 	}
 
-	return timesheet, nil
+	return
+}
+
+var dateFormats = map[string]*regexp.Regexp{
+	"1/2":      regexp.MustCompile(`^\d\d?\/\d\d?$`),
+	"1/2/06":   regexp.MustCompile(`^\d\d?\/\d\d?\/\d\d$`),
+	"1/2/2006": regexp.MustCompile(`^\d\d?\/\d\d?\/\d\d\d\d$`),
+	"2006-1-2": regexp.MustCompile(`^\d\d\d\d-\d\d?-\d\d$`),
+}
+
+// return true if the string can be parsed as a date
+func getDateLayout(s string) string {
+	for layout, matcher := range dateFormats {
+		if matcher.MatchString(s) {
+			return layout
+		}
+	}
+	return ""
 }
 
 func getMissingIssues() error {
-	issueChan := make(chan redmine.Issue)
+	issueChan := make(chan Issue)
 	errorChan := make(chan error)
 
 	var ids []int
 	for _, issue := range cache.Issues {
-		ids = append(ids, issue.Id)
+		ids = append(ids, issue.ID)
 	}
 
 	var toGet []int
 	for _, entry := range cache.TimeEntries {
 		found := false
 		for _, id := range ids {
-			if entry.Issue.Id == id {
+			if entry.Issue.ID == id {
 				found = true
 				break
 			}
 		}
 		if !found {
-			toGet = append(toGet, entry.Issue.Id)
+			toGet = append(toGet, entry.Issue.ID)
 		}
 	}
 
-	session := redmine.OpenSession(config.RedmineUrl, config.ApiKey)
+	session := OpenSession(config.RedmineURL, config.APIKey)
 
 	for _, id := range toGet {
 		go func(id int) {
@@ -218,13 +256,13 @@ func getMissingIssues() error {
 		select {
 		case issue := <-issueChan:
 			cache.Issues = append(cache.Issues, issue)
-			log.Println("appended issue", issue.Id)
+			log.Println("appended issue", issue.ID)
 		case err := <-errorChan:
 			return err
 		}
 	}
 
-	err := alfred.SaveJson(cacheFile, &cache)
+	err := alfred.SaveJSON(cacheFile, &cache)
 	if err != nil {
 		log.Println("Error saving cache:", err)
 	}
@@ -232,76 +270,89 @@ func getMissingIssues() error {
 	return nil
 }
 
-func createTimesheetItems(prefix, query, span, since, until string) ([]alfred.Item, error) {
-	var items []alfred.Item
-	parts := alfred.TrimAllLeft(strings.Split(query, alfred.Separator))
+// expand fills in the start and end times for a span
+func getSpan(arg string) (s span, err error) {
+	if arg == "today" {
+		today := time.Now().Format("2006-01-02")
+		s.Name = arg
+		s.From = today
+		s.To = today
+	} else if arg == "yesterday" {
+		yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
+		s.Name = arg
+		s.From = yesterday
+		s.To = yesterday
+	} else if arg == "week" {
+		s.Name = "week"
+		s.Label = "this week"
+		delta := -int(time.Now().Weekday())
+		start := time.Now()
+		s.From = start.AddDate(0, 0, delta).Format("2006-01-02")
+		s.To = time.Now().Format("2006-01-02")
+	} else {
+		if strings.Contains(arg, "..") {
+			parts := alfred.CleanSplitN(arg, "..", 2)
+			if len(parts) == 2 {
+				var span1 span
+				var span2 span
+				if span1, err = getSpan(parts[0]); err == nil {
+					if span2, err = getSpan(parts[1]); err == nil {
+						s.Name = arg
+						s.From = span1.From
+						s.To = span2.To
+					}
+				}
+			}
+		} else {
+			if layout := getDateLayout(arg); layout != "" {
+				var from time.Time
+				if from, err = time.Parse(layout, arg); err != nil {
+					return
+				}
+				year := from.Year()
+				if year == 0 {
+					year = time.Now().Year()
+				}
+				s.Name = arg
+				date := time.Date(year, from.Month(), from.Day(), 0, 0, 0, 0, time.Local).Format("2006-01-02")
+				s.From = date
+				s.To = date
+				s.Name = arg
+			}
+		}
+	}
 
-	timesheet, err := generateTimesheet(since, until)
-	if err != nil {
-		return items, err
+	if err == nil && s.Name == "" {
+		err = fmt.Errorf("Unable to parse span '%s'", arg)
+	}
+
+	return
+}
+func createTimesheetItems(arg string, span span) (items []alfred.Item, err error) {
+	dlog.Printf("creating items for %#v", span)
+
+	var timesheet timesheet
+	if timesheet, err = generateTimesheet(span); err != nil {
+		return
 	}
 
 	if len(timesheet.projects) > 0 {
 		total := 0.0
 		totalName := ""
 
-		if len(parts) > 1 {
-			// we have a project name terminator, so list the project's time entries
-
-			name := parts[0]
-			proj := indexOfByName(ProjectList(timesheet.projects), name)
-			if proj == -1 {
-				return items, fmt.Errorf("Couldn't find project '%s'", name)
+		for _, project := range timesheet.projects {
+			if arg == "" || alfred.FuzzyMatches(project.name, arg) {
+				items = append(items, alfred.Item{
+					Autocomplete: project.name,
+					Title:        project.name,
+					Subtitle:     fmt.Sprintf("%.2f", project.total),
+				})
+				total += project.total
 			}
+		}
 
-			project := timesheet.projects[proj]
-			issueQuery := parts[1]
-
-			session := redmine.OpenSession(config.RedmineUrl, config.ApiKey)
-
-			for _, issue := range project.issues {
-				if alfred.FuzzyMatches(issue.name, issueQuery) {
-					items = append(items, alfred.Item{
-						Autocomplete: prefix + alfred.Separator + " " + project.name + alfred.Separator + " " + issue.name,
-						Title:        issue.name,
-						Arg:          "open|" + session.IssueUrl(*issue.issue),
-						Subtitle:     fmt.Sprintf("%.2f", issue.total)})
-				}
-			}
-
-			total = project.total
-
-			if issueQuery == "" {
-				totalName = span + " for " + project.name
-			}
-		} else {
-			// no project name terminator, so filter projects by name
-
-			projectQuery := parts[0]
-
-			for _, project := range timesheet.projects {
-				entryTitle := project.name
-
-				item := alfred.Item{
-					Valid:        alfred.Invalid,
-					Autocomplete: prefix + alfred.Separator + " " + entryTitle + alfred.Separator + " ",
-					Title:        entryTitle,
-					Subtitle:     fmt.Sprintf("%.2f", project.total)}
-
-				if projectQuery != "" {
-					if alfred.FuzzyMatches(entryTitle, projectQuery) {
-						items = append(items, item)
-						total += project.total
-					}
-				} else {
-					items = append(items, item)
-					total += project.total
-				}
-			}
-
-			if projectQuery == "" {
-				totalName = span
-			}
+		if arg == "" {
+			totalName = span.Name
 		}
 
 		sort.Sort(alfred.ByTitle(items))
@@ -309,23 +360,27 @@ func createTimesheetItems(prefix, query, span, since, until string) ([]alfred.It
 		if totalName != "" {
 			item := alfred.Item{
 				Title:        fmt.Sprintf("Total hours %s: %.2f", totalName, total),
-				Arg:          "open " + getTimesheetUrl(since, until),
-				Autocomplete: query,
+				Autocomplete: arg,
 				Subtitle:     alfred.Line,
+				Arg: &alfred.ItemArg{
+					Keyword: timesheetKeyword,
+					Mode:    alfred.ModeDo,
+					Data:    alfred.Stringify(&timesheetCfg{ToOpen: getTimesheetURL(span)}),
+				},
 			}
 			items = alfred.InsertItem(items, item, 0)
 		}
 	}
 
-	return items, nil
+	return
 }
 
-func getTimesheetUrl(since, until string) string {
-	addrFormat := config.RedmineUrl + "/timesheet/report" +
+func getTimesheetURL(span span) string {
+	addrFormat := config.RedmineURL + "/timesheet/report" +
 		"?timesheet[date_from]=%v" +
 		"&timesheet[date_to]=%v" +
 		"&timesheet[sort]=project" +
 		"&timesheet[users][]=%v"
 
-	return fmt.Sprintf(addrFormat, since, until, cache.User.Id)
+	return fmt.Sprintf(addrFormat, span.From, span.To, cache.User.ID)
 }

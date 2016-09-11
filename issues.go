@@ -2,102 +2,121 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
+	"os/exec"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jason0x43/go-alfred"
-	"github.com/jason0x43/go-redmine"
 )
 
+// IssuesCommand is a command
 type IssuesCommand struct{}
 
-func (t IssuesCommand) Keyword() string {
-	return "issues"
-}
-
-func (c IssuesCommand) IsEnabled() bool {
-	return config.ApiKey != ""
-}
-
-func (t IssuesCommand) MenuItem() alfred.Item {
-	issuesUrl := config.RedmineUrl + "/issues?utf8=✓&set_filter=1&" +
-		"f[]=assigned_to_id&op[assigned_to_id]==&v[assigned_to_id][]=me&" +
-		"f[]=status_id&op[status_id]=o&f[]=&c[]=project&c[]=status&c[]=priority&c[]=subject&" +
-		"c[]=updated_on&c[]=due_date&c[]=estimated_hours&c[]=spent_hours&c[]=done_ratio&group_by="
-
-	return alfred.Item{
-		Title:        t.Keyword(),
-		Autocomplete: t.Keyword() + " ",
-		Arg:          "open " + issuesUrl,
-		Subtitle:     "List your assigned issues",
+// About returns information about a command
+func (c IssuesCommand) About() alfred.CommandDef {
+	return alfred.CommandDef{
+		Keyword:     issuesKeyword,
+		Description: "List your assigned issues",
+		IsEnabled:   config.APIKey != "",
+		Mods: map[alfred.ModKey]alfred.ItemMod{
+			alfred.ModCmd: alfred.ItemMod{
+				Arg: &alfred.ItemArg{
+					Keyword: issuesKeyword,
+					Mode:    alfred.ModeDo,
+					Data:    alfred.Stringify(&issueCfg{ToOpen: getMyIssuesURL()}),
+				},
+			},
+		},
 	}
 }
 
-func (t IssuesCommand) Items(prefix, query string) (items []alfred.Item, err error) {
-	parts := alfred.TrimAllLeft(strings.Split(query, alfred.Separator))
-	log.Printf("parts: %s", parts)
+// Items returns a list of filter items
+func (c IssuesCommand) Items(arg, data string) (items []alfred.Item, err error) {
+	var cfg issueCfg
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &cfg); err != nil {
+			dlog.Printf("Invalid issue config")
+		}
+	}
 
-	if len(parts) > 1 {
-		var issue redmine.Issue
-		if issue, err = getIssueByStringId(parts[0]); err != nil {
+	if err = checkRefresh(); err != nil {
+		return
+	}
+
+	pid := -1
+	if cfg.ProjectID != nil {
+		pid = *cfg.ProjectID
+	}
+
+	if cfg.IssueID != nil {
+		var idx int
+		if idx = indexOfByID(issueList(cache.Issues), *cfg.IssueID); idx == -1 {
+			err = fmt.Errorf("Invalid issue ID %d", *cfg.IssueID)
 			return
 		}
 
-		prefix += strconv.Itoa(issue.Id) + alfred.Separator + " "
+		issue := cache.Issues[idx]
 
-		if alfred.FuzzyMatches("subject", parts[1]) {
-			items = append(items, alfred.Item{
-				Title: "subject: " + issue.Subject,
-				Valid: alfred.Invalid,
-			})
-		}
-		if alfred.FuzzyMatches("status", parts[1]) {
-			if parts[1] == "status" {
-				for _, st := range cache.IssueStatuses {
-					newIssue := redmine.UpdateIssue{Status: st.Id}
-					data := updateIssueMessage{Action: "update", Id: issue.Id, Issue: newIssue}
-					dataString, _ := json.Marshal(data)
+		if arg != "" {
+			parts := alfred.CleanSplitN(arg, " ", 2)
 
+			if alfred.FuzzyMatches("subject:", parts[0]) {
+				items = append(items, alfred.Item{
+					Title: "subject: " + issue.Subject,
+				})
+			}
+
+			if alfred.FuzzyMatches("status:", parts[0]) {
+				if parts[0] == "status:" {
+					for _, st := range cache.IssueStatuses {
+						items = append(items, alfred.Item{
+							Title: st.Name,
+							Arg: &alfred.ItemArg{
+								Keyword: issuesKeyword,
+								Mode:    alfred.ModeDo,
+								Data: alfred.Stringify(&issueCfg{
+									ToUpdate: &updateIssueMessage{
+										Action: "update",
+										ID:     issue.ID,
+										Issue:  UpdateIssue{Status: st.ID},
+									},
+								}),
+							},
+						})
+					}
+				} else {
 					items = append(items, alfred.Item{
-						Title: st.Name,
-						Arg:   t.Keyword() + " " + string(dataString),
+						Title:        "status: " + issue.Status.Name,
+						Autocomplete: "status: " + issue.Status.Name,
 					})
 				}
-			} else {
-				items = append(items, alfred.Item{
-					Title:        "status: " + issue.Status.Name,
-					Autocomplete: prefix + "status",
-					Valid:        alfred.Invalid,
-				})
 			}
 		}
 	} else {
-		var issues []redmine.Issue
-		closed := getClosedStatusIds()
+		closed := getClosedStatusIDs()
+		var issues []Issue
 
 		for _, issue := range cache.Issues {
-			if _, isClosed := closed[issue.Status.Id]; !isClosed {
+			if _, isClosed := closed[issue.Status.ID]; !isClosed {
 				issues = append(issues, issue)
 			}
 		}
 
-		items = append(items, createIssueItems(prefix, query, issues)...)
+		items = append(items, createIssueItems(arg, pid, issues)...)
 
-		if query == "" {
-			issuesUrl := config.RedmineUrl + "/issues?utf8=✓&set_filter=1&" +
-				"f[]=assigned_to_id&op[assigned_to_id]==&v[assigned_to_id][]=me&" +
-				"f[]=status_id&op[status_id]=o&f[]=&c[]=project&c[]=status&c[]=priority&c[]=subject&" +
-				"c[]=updated_on&c[]=due_date&c[]=estimated_hours&c[]=spent_hours&c[]=done_ratio&group_by="
-
+		if arg == "" {
+			dlog.Printf("adding View All item")
 			item := alfred.Item{
 				Title:    "View all on Redmine",
 				Subtitle: alfred.Line,
-				Arg:      "open " + issuesUrl,
+				Arg: &alfred.ItemArg{
+					Keyword: issuesKeyword,
+					Mode:    alfred.ModeDo,
+					Data:    alfred.Stringify(&issueCfg{ToOpen: getMyIssuesURL()}),
+				},
 			}
 			items = alfred.InsertItem(items, item, 0)
 		}
@@ -106,98 +125,130 @@ func (t IssuesCommand) Items(prefix, query string) (items []alfred.Item, err err
 	return
 }
 
-func (t IssuesCommand) Do(query string) (out string, err error) {
-	log.Printf("issues %s", query)
-
-	var data updateIssueMessage
-	if err = json.Unmarshal([]byte(query), &data); err != nil {
-		return
+// Do runs the command
+func (c IssuesCommand) Do(data string) (out string, err error) {
+	var cfg issueCfg
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &cfg); err != nil {
+			return "", fmt.Errorf("Invalid issue config")
+		}
 	}
 
-	session := redmine.OpenSession(config.RedmineUrl, config.ApiKey)
+	if cfg.ToOpen != "" {
+		err = exec.Command("open", cfg.ToOpen).Run()
+	}
 
-	switch data.Action {
-	case "update":
-		if err = session.UpdateIssue(data.Id, data.Issue); err != nil {
+	if cfg.ToUpdate != nil {
+		toUpdate := *cfg.ToUpdate
+		session := OpenSession(config.RedmineURL, config.APIKey)
+
+		if err = session.UpdateIssue(toUpdate.ID, toUpdate.Issue); err != nil {
 			return
 		}
 
-		var issue redmine.Issue
-		if issue, err = session.GetIssue(data.Id); err != nil {
+		var issue Issue
+		if issue, err = session.GetIssue(toUpdate.ID); err != nil {
 			return
 		}
 
-		for i, _ := range cache.Issues {
-			if cache.Issues[i].Id == issue.Id {
+		for i := range cache.Issues {
+			if cache.Issues[i].ID == issue.ID {
 				cache.Issues[i] = issue
-				if err := alfred.SaveJson(cacheFile, &cache); err != nil {
+				if err := alfred.SaveJSON(cacheFile, &cache); err != nil {
 					log.Printf("Error saving cache: %v\n", err)
 				}
 				break
 			}
 		}
+
+		out = fmt.Sprintf("Updated issue %d", toUpdate.ID)
 	}
 
-	return fmt.Sprintf("Updated issue %d", data.Id), nil
+	return
 }
 
-// support -------------------------------------------------------------
+// support -------------------------------------------------------------------
+
+const issuesKeyword = "issues"
+
+type issueCfg struct {
+	IssueID   *int
+	ProjectID *int
+	ToUpdate  *updateIssueMessage
+	ToOpen    string
+}
 
 type updateIssueMessage struct {
 	Action string
-	Id     int
-	Issue  redmine.UpdateIssue
+	ID     int
+	Issue  UpdateIssue
 }
 
-func createIssueItems(prefix, query string, issues []redmine.Issue) []alfred.Item {
-	sort.Sort(byDueDate(issues))
-	sort.Stable(sort.Reverse(byPriority(issues)))
-	sort.Stable(byAssignment(issues))
+func createIssueItems(arg string, pid int, issues []Issue) (items []alfred.Item) {
+	var filtered []Issue
 
-	var items []alfred.Item
+	for i := range issues {
+		if pid != -1 && pid != issues[i].Project.ID {
+			// If a project ID was given, only use issues for that project
+			continue
+		}
 
-	for _, issue := range issues {
-		log.Printf("checking if '" + query + "' fuzzy matches '" + issue.Subject + "'")
-		if alfred.FuzzyMatches(issue.Subject, query) || alfred.FuzzyMatches(strconv.Itoa(issue.Id), query) {
-			items = append(items, createIssueItem(prefix, issue))
+		if alfred.FuzzyMatches(issues[i].Subject, arg) || alfred.FuzzyMatches(strconv.Itoa(issues[i].ID), arg) {
+			filtered = append(filtered, issues[i])
 		}
 	}
 
-	return items
+	sort.Sort(byDueDate(filtered))
+	sort.Stable(sort.Reverse(byPriority(filtered)))
+	sort.Stable(byAssignment(filtered))
+
+	for i := range filtered {
+		items = append(items, filtered[i].toItem())
+	}
+
+	return
 }
 
-func createIssueItem(prefix string, issue redmine.Issue) (item alfred.Item) {
-	subTitle := fmt.Sprintf("%d [%s]", issue.Id, issue.Project.Name)
-	if issue.DueDate != "" {
-		dueDate, _ := time.Parse("2006-01-02", issue.DueDate)
+func getMyIssuesURL() string {
+	return config.RedmineURL + "/issues?utf8=✓&set_filter=1&" +
+		"f[]=assigned_to_id&op[assigned_to_id]==&v[assigned_to_id][]=me&" +
+		"f[]=status_id&op[status_id]=o&f[]=&c[]=project&c[]=status&c[]=priority&c[]=subject&" +
+		"c[]=updated_on&c[]=due_date&c[]=estimated_hours&c[]=spent_hours&c[]=done_ratio&group_by="
+}
+
+func (i *Issue) toItem() (item alfred.Item) {
+	subTitle := fmt.Sprintf("%d [%s]", i.ID, i.Project.Name)
+	if i.DueDate != "" {
+		dueDate, _ := time.Parse("2006-01-02", i.DueDate)
 		subTitle += " Due " + toHumanDateString(dueDate) + ","
 	}
-	subTitle += " " + issue.Priority.Name
+	subTitle += " " + i.Priority.Name
 
-	item.Title = issue.Subject
+	item.Title = i.Subject
 	item.Subtitle = subTitle
-	item.Autocomplete = prefix + strconv.Itoa(issue.Id) + alfred.Separator + " "
-	item.Arg = "open " + fmt.Sprintf("%s/issues/%v", config.RedmineUrl, issue.Id)
+	item.Autocomplete = strconv.Itoa(i.ID)
 
-	if issue.AssignedTo.Id == cache.User.Id {
+	url := fmt.Sprintf("%s/issues/%v", config.RedmineURL, i.ID)
+	item.Arg = &alfred.ItemArg{
+		Keyword: issuesKeyword,
+		Mode:    alfred.ModeDo,
+		Data:    alfred.Stringify(&issueCfg{ToOpen: url}),
+	}
+
+	if i.AssignedTo.ID == cache.User.ID {
 		item.Icon = "icon_me.png"
 	}
 
 	return
 }
 
-func getIssueByStringId(idStr string) (issue redmine.Issue, err error) {
-	var id int
-	if id, err = strconv.Atoi(idStr); err != nil {
-		return
-	}
-
+func getIssueByID(id int) (issue Issue, err error) {
 	for _, i := range cache.Issues {
-		if i.Id == id {
+		if i.ID == id {
 			issue = i
 			return
 		}
 	}
 
-	return issue, errors.New("Invalid ID " + idStr)
+	return issue, fmt.Errorf("Invalid ID %d", id)
 }
