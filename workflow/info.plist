@@ -97,6 +97,19 @@
 				<false/>
 			</dict>
 		</array>
+		<key>A56CEEFD-4F7E-43D7-899D-F6A8459BA0CE</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
 		<key>C3238CBD-5460-4837-980B-C0F25688B25E</key>
 		<array>
 			<dict>
@@ -188,7 +201,7 @@
 				<key>escaping</key>
 				<integer>4</integer>
 				<key>keyword</key>
-				<string>rmm</string>
+				<string>rmn</string>
 				<key>queuedelaycustom</key>
 				<integer>1</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -208,7 +221,7 @@
 				<key>subtext</key>
 				<string>Interact with a Redmine server</string>
 				<key>title</key>
-				<string>rmm</string>
+				<string>rmn</string>
 				<key>type</key>
 				<integer>0</integer>
 				<key>withspace</key>
@@ -468,6 +481,49 @@
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>4</integer>
+				<key>keyword</key>
+				<string>rms</string>
+				<key>queuedelaycustom</key>
+				<integer>1</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<false/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Talking to Redmine...</string>
+				<key>script</key>
+				<string>./alfred-redmine "$1" "{\"keyword\":\"status\"}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Get current status</string>
+				<key>title</key>
+				<string>rms</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>A56CEEFD-4F7E-43D7-899D-F6A8459BA0CE</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
 	</array>
 	<key>readme</key>
 	<string>This workflow allows a user to interact with a Redmine server. Functions include listing projects and issues, as well as generating local time sheets.</string>
@@ -478,84 +534,91 @@
 			<key>xpos</key>
 			<integer>40</integer>
 			<key>ypos</key>
-			<integer>50</integer>
+			<integer>40</integer>
 		</dict>
 		<key>2264D33D-D74E-4270-8FB0-8F387519B6D2</key>
 		<dict>
 			<key>xpos</key>
 			<integer>230</integer>
 			<key>ypos</key>
-			<integer>290</integer>
+			<integer>280</integer>
 		</dict>
 		<key>3632DA6A-27A2-4749-8387-56CB7D391068</key>
 		<dict>
 			<key>xpos</key>
 			<integer>230</integer>
 			<key>ypos</key>
-			<integer>170</integer>
+			<integer>160</integer>
 		</dict>
 		<key>4380E678-B8E0-4A91-A6B8-B7BBCB8CD77C</key>
 		<dict>
 			<key>xpos</key>
 			<integer>230</integer>
 			<key>ypos</key>
-			<integer>50</integer>
+			<integer>40</integer>
 		</dict>
 		<key>5E3ADEAD-BB3C-4333-AD15-B0A2C0BEFB7B</key>
 		<dict>
 			<key>xpos</key>
 			<integer>890</integer>
 			<key>ypos</key>
-			<integer>170</integer>
+			<integer>160</integer>
 		</dict>
 		<key>6D2E391F-023C-4249-A11F-065DBE26946B</key>
 		<dict>
 			<key>xpos</key>
 			<integer>710</integer>
 			<key>ypos</key>
-			<integer>200</integer>
+			<integer>190</integer>
 		</dict>
 		<key>9048FBEE-C3C0-45AE-9A79-2E33F773232E</key>
 		<dict>
 			<key>xpos</key>
 			<integer>800</integer>
 			<key>ypos</key>
-			<integer>200</integer>
+			<integer>190</integer>
 		</dict>
 		<key>99484602-CCC8-4776-8162-2BEBE11709F6</key>
 		<dict>
 			<key>xpos</key>
 			<integer>890</integer>
 			<key>ypos</key>
-			<integer>50</integer>
+			<integer>40</integer>
 		</dict>
 		<key>9E98B553-A8F8-453A-ADED-4EEF66C2635E</key>
 		<dict>
 			<key>xpos</key>
 			<integer>800</integer>
 			<key>ypos</key>
-			<integer>80</integer>
+			<integer>70</integer>
+		</dict>
+		<key>A56CEEFD-4F7E-43D7-899D-F6A8459BA0CE</key>
+		<dict>
+			<key>xpos</key>
+			<integer>230</integer>
+			<key>ypos</key>
+			<integer>520</integer>
 		</dict>
 		<key>C3238CBD-5460-4837-980B-C0F25688B25E</key>
 		<dict>
 			<key>xpos</key>
 			<integer>230</integer>
 			<key>ypos</key>
-			<integer>410</integer>
+			<integer>400</integer>
 		</dict>
 		<key>C3B34AD1-9172-4F0F-B777-A7A84AD88027</key>
 		<dict>
 			<key>xpos</key>
 			<integer>710</integer>
 			<key>ypos</key>
-			<integer>80</integer>
+			<integer>70</integer>
 		</dict>
 		<key>CA8FC94A-7993-4605-A2BC-689323A7B296</key>
 		<dict>
 			<key>xpos</key>
 			<integer>520</integer>
 			<key>ypos</key>
-			<integer>50</integer>
+			<integer>40</integer>
 		</dict>
 	</dict>
 	<key>version</key>
