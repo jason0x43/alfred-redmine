@@ -108,17 +108,29 @@ func (c IssuesCommand) Items(arg, data string) (items []alfred.Item, err error) 
 		items = append(items, createIssueItems(arg, pid, issues)...)
 
 		if arg == "" {
-			dlog.Printf("adding View All item")
-			item := alfred.Item{
-				Title:    "View all on Redmine",
-				Subtitle: alfred.Line,
-				Arg: &alfred.ItemArg{
-					Keyword: issuesKeyword,
-					Mode:    alfred.ModeDo,
-					Data:    alfred.Stringify(&issueCfg{ToOpen: getMyIssuesURL()}),
-				},
+			if pid == -1 {
+				dlog.Printf("adding View All item")
+				item := alfred.Item{
+					Title:    "View all on Redmine",
+					Subtitle: alfred.Line,
+					Arg: &alfred.ItemArg{
+						Keyword: issuesKeyword,
+						Mode:    alfred.ModeDo,
+						Data:    alfred.Stringify(&issueCfg{ToOpen: getMyIssuesURL()}),
+					},
+				}
+				items = alfred.InsertItem(items, item, 0)
+			} else {
+				dlog.Printf("adding Project name item")
+				pi := indexOfByID(projectList(cache.Projects), pid)
+				project := cache.Projects[pi]
+				item := alfred.Item{
+					Title:    project.Name,
+					Subtitle: alfred.Line,
+					Arg:      &alfred.ItemArg{Keyword: projectsKeyword},
+				}
+				items = alfred.InsertItem(items, item, 0)
 			}
-			items = alfred.InsertItem(items, item, 0)
 		}
 	}
 
