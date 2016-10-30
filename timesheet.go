@@ -118,14 +118,18 @@ type span struct {
 
 func createTimesheetItem(span span) (item alfred.Item) {
 	label := span.Name
+
+	var sublabel string
 	if span.Label != "" {
-		label = span.Label
+		sublabel = span.Label
+	} else {
+		sublabel = span.Name
 	}
 
 	item = alfred.Item{
 		Autocomplete: label,
 		Title:        label,
-		Subtitle:     "Generate a timesheet for " + label,
+		Subtitle:     "Generate a timesheet for " + sublabel,
 		Arg: &alfred.ItemArg{
 			Keyword: timesheetKeyword,
 			Data:    alfred.Stringify(&timesheetCfg{Span: &span}),
