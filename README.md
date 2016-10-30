@@ -18,7 +18,9 @@ Once you’ve logged in, a number of commands will be available. These may be ac
 
 ### issues
 
-The "issues" subcommand (`rmi` keyword) will list the issues that you're assigned to or watching. Actioning an issue will open its page on Redmine in a browser. Actioning the "View all" heading will open a list of all your issues on Redmine in a browser.
+The "issues" subcommand (`rmi` keyword) will list the issues that you're assigned to or watching. Actioning an issue will show details about the issue (currently just status and subject). Holding Cmd while actioning an issue will open its page on Redmine in a browser. Actioning the "View all" heading will open a list of all your issues on Redmine in a browser.
+
+When the issue details list is open, actioning the status will bring up a list of available statuses; selecting one of these will update the issue status on Redmine.
 
 ### projects
 

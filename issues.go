@@ -59,40 +59,41 @@ func (c IssuesCommand) Items(arg, data string) (items []alfred.Item, err error) 
 		}
 
 		issue := cache.Issues[idx]
+		parts := alfred.CleanSplitN(arg, " ", 2)
 
-		if arg != "" {
-			parts := alfred.CleanSplitN(arg, " ", 2)
+		if alfred.FuzzyMatches("subject:", parts[0]) {
+			items = append(items, alfred.Item{
+				Title: "Subject: " + issue.Subject,
+			})
+		}
 
-			if alfred.FuzzyMatches("subject:", parts[0]) {
-				items = append(items, alfred.Item{
-					Title: "subject: " + issue.Subject,
-				})
-			}
+		if alfred.FuzzyMatches("status:", parts[0]) {
 
-			if alfred.FuzzyMatches("status:", parts[0]) {
-				if parts[0] == "status:" {
-					for _, st := range cache.IssueStatuses {
-						items = append(items, alfred.Item{
+			if parts[0] == "Status:" {
+				for _, st := range cache.IssueStatuses {
+					if len(parts) == 1 || alfred.FuzzyMatches(st.Name, parts[1]) {
+						item := alfred.Item{
 							Title: st.Name,
 							Arg: &alfred.ItemArg{
 								Keyword: issuesKeyword,
 								Mode:    alfred.ModeDo,
 								Data: alfred.Stringify(&issueCfg{
 									ToUpdate: &updateIssueMessage{
-										Action: "update",
-										ID:     issue.ID,
-										Issue:  UpdateIssue{Status: st.ID},
+										ID:    issue.ID,
+										Issue: UpdateIssue{Status: st.ID},
 									},
 								}),
 							},
-						})
+						}
+						item.AddCheckBox(issue.Status == st)
+						items = append(items, item)
 					}
-				} else {
-					items = append(items, alfred.Item{
-						Title:        "status: " + issue.Status.Name,
-						Autocomplete: "status: " + issue.Status.Name,
-					})
 				}
+			} else {
+				items = append(items, alfred.Item{
+					Title:        "Status: " + issue.Status.Name,
+					Autocomplete: "Status: ",
+				})
 			}
 		}
 	} else {
@@ -191,9 +192,8 @@ type issueCfg struct {
 }
 
 type updateIssueMessage struct {
-	Action string
-	ID     int
-	Issue  UpdateIssue
+	ID    int
+	Issue UpdateIssue
 }
 
 func createIssueItems(arg string, pid int, issues []Issue) (items []alfred.Item) {
@@ -243,9 +243,17 @@ func (i *Issue) toItem() (item alfred.Item) {
 	url := fmt.Sprintf("%s/issues/%v", config.RedmineURL, i.ID)
 	item.Arg = &alfred.ItemArg{
 		Keyword: issuesKeyword,
-		Mode:    alfred.ModeDo,
-		Data:    alfred.Stringify(&issueCfg{ToOpen: url}),
+		Data:    alfred.Stringify(&issueCfg{IssueID: &i.ID}),
 	}
+
+	item.AddMod(alfred.ModCmd, alfred.ItemMod{
+		Subtitle: "Open the issue on Redmine...",
+		Arg: &alfred.ItemArg{
+			Keyword: issuesKeyword,
+			Mode:    alfred.ModeDo,
+			Data:    alfred.Stringify(&issueCfg{ToOpen: url}),
+		},
+	})
 
 	if i.AssignedTo.ID == cache.User.ID {
 		item.Icon = "icon_me.png"
