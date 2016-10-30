@@ -54,6 +54,7 @@ func main() {
 		ProjectsCommand{},
 		TimesheetCommand{},
 		SyncCommand{},
+		StatusCommand{},
 		LoginCommand{},
 		LogoutCommand{},
 	})
