@@ -8,11 +8,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -125,6 +125,19 @@ type ValueField struct {
 	Value string `json:"value,omitempty"`
 }
 
+// AllowSelfSignedCert tells a session whether or not to allow SSL connections to
+// servers with self-signed certificates
+func AllowSelfSignedCert(allow bool) {
+	if allow {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client = &http.Client{Transport: tr}
+	} else {
+		client = &http.Client{}
+	}
+}
+
 // NewSession creates a new session for a Redmine server.
 func NewSession(redmineURL, username, password string) (Session, error) {
 	session := Session{
@@ -138,7 +151,7 @@ func NewSession(redmineURL, username, password string) (Session, error) {
 		return session, err
 	}
 
-	log.Printf("got user: %s", user)
+	dlog.Printf("got user: %v", user)
 	session.apiKey = user.APIKey
 
 	return session, nil
@@ -246,13 +259,13 @@ func (session *Session) GetIssue(id int) (issue Issue, err error) {
 }
 
 func (session *Session) UpdateIssue(id int, issue UpdateIssue) (err error) {
-	log.Printf("Updating issue %v", issue)
+	dlog.Printf("Updating issue %v", issue)
 	data := map[string]interface{}{
 		"issue": issue,
 	}
 	var resp []byte
 	resp, err = session.put("/issues/"+strconv.Itoa(id)+".json", data)
-	log.Printf("got response: %s", string(resp))
+	dlog.Printf("got response: %s", string(resp))
 	return err
 }
 
@@ -374,10 +387,10 @@ func (session *Session) request(method string, requestURL string, body io.Reader
 	req.Header.Add("Content-Type", "application/json")
 
 	if session.apiKey != "" {
-		log.Printf("using api key: %s", session.apiKey)
+		dlog.Printf("using api key: %s", session.apiKey)
 		req.Header.Add("X-Redmine-API-Key", session.apiKey)
 	} else {
-		log.Printf("using auth key: %s:*****", session.username)
+		dlog.Printf("using auth key: %s:*****", session.username)
 		req.SetBasicAuth(session.username, session.password)
 	}
 
@@ -406,7 +419,7 @@ func (session *Session) get(path string, params map[string]string) ([]byte, erro
 		requestURL += "?" + toQueryString(params)
 	}
 
-	log.Printf("GETing from URL: %s", requestURL)
+	dlog.Printf("GETing from URL: %s", requestURL)
 	return session.request("GET", requestURL, nil)
 }
 
@@ -423,7 +436,7 @@ func (session *Session) send(method, path string, data interface{}) ([]byte, err
 		}
 	}
 
-	log.Printf(method+"ing to URL %s: %s", requestURL, string(body))
+	dlog.Printf(method+"ing to URL %s: %s", requestURL, string(body))
 	return session.request(method, requestURL, bytes.NewBuffer(body))
 }
 

@@ -50,6 +50,8 @@ func main() {
 		log.Println("Error loading cache:", err)
 	}
 
+	AllowSelfSignedCert(config.AllowSelfSigned)
+
 	workflow.Run([]alfred.Command{
 		IssuesCommand{},
 		ProjectsCommand{},
