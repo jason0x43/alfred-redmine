@@ -27,8 +27,10 @@ func refresh() error {
 	errorChan := make(chan error)
 
 	session := OpenSession(config.RedmineURL, config.APIKey)
+	numReqs := 0
 
 	log.Println("Getting user...")
+	numReqs++
 	go func() {
 		user, err := session.GetUser()
 		if err != nil {
@@ -38,17 +40,8 @@ func refresh() error {
 		}
 	}()
 
-	log.Println("Getting issues...")
-	go func() {
-		issues, err := session.GetIssues()
-		if err != nil {
-			errorChan <- err
-		} else {
-			dataChan <- issues
-		}
-	}()
-
 	log.Println("Getting statuses...")
+	numReqs++
 	go func() {
 		statuses, err := session.GetIssueStatuses()
 		if err != nil {
@@ -59,6 +52,7 @@ func refresh() error {
 	}()
 
 	log.Println("Getting projects...")
+	numReqs++
 	go func() {
 		projects, err := session.GetProjects()
 		if err != nil {
@@ -69,6 +63,7 @@ func refresh() error {
 	}()
 
 	log.Println("Getting time entries...")
+	numReqs++
 	go func() {
 		timeEntries, err := session.GetTimeEntries(7)
 		if err != nil {
@@ -78,8 +73,19 @@ func refresh() error {
 		}
 	}()
 
-	// wait for 5 items to come in
-	for i := 0; i < 5; i++ {
+	log.Println("Getting issues...")
+	numReqs++
+	go func() {
+		issues, err := session.GetIssues()
+		if err != nil {
+			errorChan <- err
+		} else {
+			dataChan <- issues
+		}
+	}()
+
+	// wait for numReqs items to come in
+	for i := 0; i < numReqs; i++ {
 		select {
 		case data := <-dataChan:
 			switch value := data.(type) {
