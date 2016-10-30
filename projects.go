@@ -80,7 +80,7 @@ func (c ProjectsCommand) Items(arg, data string) (items []alfred.Item, err error
 				},
 			}
 
-			item.AddMod(alfred.ModAlt, alfred.ItemMod{
+			item.AddMod(alfred.ModCmd, alfred.ItemMod{
 				Subtitle: "Open this project in Redmine",
 				Arg: &alfred.ItemArg{
 					Keyword: projectsKeyword,
@@ -111,7 +111,7 @@ func (c ProjectsCommand) Items(arg, data string) (items []alfred.Item, err error
 				},
 			}
 
-			item.AddMod(alfred.ModAlt, alfred.ItemMod{
+			item.AddMod(alfred.ModCmd, alfred.ItemMod{
 				Subtitle: "Open this project in Redmine",
 				Arg: &alfred.ItemArg{
 					Keyword: projectsKeyword,

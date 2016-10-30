@@ -132,8 +132,8 @@ func createTimesheetItem(span span) (item alfred.Item) {
 		},
 	}
 
-	item.AddMod(alfred.ModAlt, alfred.ItemMod{
-		Subtitle: "Open the timesheet for " + label,
+	item.AddMod(alfred.ModCmd, alfred.ItemMod{
+		Subtitle: "Open the timesheet for " + sublabel,
 		Arg: &alfred.ItemArg{
 			Keyword: timesheetKeyword,
 			Mode:    alfred.ModeDo,
