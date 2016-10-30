@@ -23,7 +23,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -36,7 +36,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -49,13 +49,26 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
 				<string></string>
 				<key>vitoclose</key>
 				<true/>
+			</dict>
+		</array>
+		<key>5B22E01C-BEFF-4AC6-8781-4D4BE54E926F</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
 			</dict>
 		</array>
 		<key>6D2E391F-023C-4249-A11F-065DBE26946B</key>
@@ -71,11 +84,60 @@
 				<false/>
 			</dict>
 		</array>
+		<key>7214ECF2-AA87-469C-85CE-F5BF12DD29FC</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>5B22E01C-BEFF-4AC6-8781-4D4BE54E926F</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>73AB01A9-EE42-41F8-9DBD-585C63EDE948</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>7214ECF2-AA87-469C-85CE-F5BF12DD29FC</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>9514D0CB-3F3A-449B-877C-8ADB9062DA4D</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>9048FBEE-C3C0-45AE-9A79-2E33F773232E</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
 				<string>5E3ADEAD-BB3C-4333-AD15-B0A2C0BEFB7B</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>9514D0CB-3F3A-449B-877C-8ADB9062DA4D</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -101,7 +163,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -114,7 +176,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>CA8FC94A-7993-4605-A2BC-689323A7B296</string>
+				<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -294,6 +356,60 @@
 			<string>alfred.workflow.utility.hidealfred</string>
 			<key>uid</key>
 			<string>9E98B553-A8F8-453A-ADED-4EEF66C2635E</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.junction</string>
+			<key>uid</key>
+			<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.hidealfred</string>
+			<key>uid</key>
+			<string>5B22E01C-BEFF-4AC6-8781-4D4BE54E926F</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>inputstring</key>
+				<string>{query}</string>
+				<key>matchcasesensitive</key>
+				<false/>
+				<key>matchmode</key>
+				<integer>2</integer>
+				<key>matchstring</key>
+				<string>"mode":"do"</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.filter</string>
+			<key>uid</key>
+			<string>7214ECF2-AA87-469C-85CE-F5BF12DD29FC</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>inputstring</key>
+				<string>{query}</string>
+				<key>matchcasesensitive</key>
+				<false/>
+				<key>matchmode</key>
+				<integer>2</integer>
+				<key>matchstring</key>
+				<string>(?!"mode":"do")</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.filter</string>
+			<key>uid</key>
+			<string>9514D0CB-3F3A-449B-877C-8ADB9062DA4D</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -557,38 +673,66 @@
 			<key>ypos</key>
 			<integer>40</integer>
 		</dict>
+		<key>5B22E01C-BEFF-4AC6-8781-4D4BE54E926F</key>
+		<dict>
+			<key>xpos</key>
+			<integer>690</integer>
+			<key>ypos</key>
+			<integer>70</integer>
+		</dict>
 		<key>5E3ADEAD-BB3C-4333-AD15-B0A2C0BEFB7B</key>
 		<dict>
 			<key>xpos</key>
-			<integer>890</integer>
+			<integer>1180</integer>
 			<key>ypos</key>
 			<integer>160</integer>
 		</dict>
 		<key>6D2E391F-023C-4249-A11F-065DBE26946B</key>
 		<dict>
 			<key>xpos</key>
-			<integer>710</integer>
+			<integer>1000</integer>
 			<key>ypos</key>
 			<integer>190</integer>
+		</dict>
+		<key>7214ECF2-AA87-469C-85CE-F5BF12DD29FC</key>
+		<dict>
+			<key>xpos</key>
+			<integer>620</integer>
+			<key>ypos</key>
+			<integer>70</integer>
+		</dict>
+		<key>73AB01A9-EE42-41F8-9DBD-585C63EDE948</key>
+		<dict>
+			<key>xpos</key>
+			<integer>520</integer>
+			<key>ypos</key>
+			<integer>70</integer>
 		</dict>
 		<key>9048FBEE-C3C0-45AE-9A79-2E33F773232E</key>
 		<dict>
 			<key>xpos</key>
-			<integer>800</integer>
+			<integer>1090</integer>
 			<key>ypos</key>
 			<integer>190</integer>
+		</dict>
+		<key>9514D0CB-3F3A-449B-877C-8ADB9062DA4D</key>
+		<dict>
+			<key>xpos</key>
+			<integer>620</integer>
+			<key>ypos</key>
+			<integer>130</integer>
 		</dict>
 		<key>99484602-CCC8-4776-8162-2BEBE11709F6</key>
 		<dict>
 			<key>xpos</key>
-			<integer>890</integer>
+			<integer>1180</integer>
 			<key>ypos</key>
 			<integer>40</integer>
 		</dict>
 		<key>9E98B553-A8F8-453A-ADED-4EEF66C2635E</key>
 		<dict>
 			<key>xpos</key>
-			<integer>800</integer>
+			<integer>1090</integer>
 			<key>ypos</key>
 			<integer>70</integer>
 		</dict>
@@ -609,14 +753,14 @@
 		<key>C3B34AD1-9172-4F0F-B777-A7A84AD88027</key>
 		<dict>
 			<key>xpos</key>
-			<integer>710</integer>
+			<integer>1000</integer>
 			<key>ypos</key>
 			<integer>70</integer>
 		</dict>
 		<key>CA8FC94A-7993-4605-A2BC-689323A7B296</key>
 		<dict>
 			<key>xpos</key>
-			<integer>520</integer>
+			<integer>810</integer>
 			<key>ypos</key>
 			<integer>40</integer>
 		</dict>
