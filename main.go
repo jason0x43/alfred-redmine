@@ -14,8 +14,9 @@ var cacheFile string
 var configFile string
 var workflow alfred.Workflow
 var config struct {
-	APIKey     string
-	RedmineURL string
+	APIKey          string `desc:"Server API key"`
+	RedmineURL      string `desc:"Server URL"`
+	AllowSelfSigned bool   `desc:"If true, accept self-signed SSL certificates"`
 }
 var cache struct {
 	Time          time.Time
@@ -54,7 +55,7 @@ func main() {
 		ProjectsCommand{},
 		TimesheetCommand{},
 		SyncCommand{},
-		StatusCommand{},
+		OptionsCommand{},
 		LoginCommand{},
 		LogoutCommand{},
 	})

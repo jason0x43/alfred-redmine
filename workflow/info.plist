@@ -19,6 +19,19 @@
 				<false/>
 			</dict>
 		</array>
+		<key>14A623DC-1133-4608-8697-C287512366AE</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>73AB01A9-EE42-41F8-9DBD-585C63EDE948</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
 		<key>2264D33D-D74E-4270-8FB0-8F387519B6D2</key>
 		<array>
 			<dict>
@@ -619,13 +632,13 @@
 				<key>runningsubtext</key>
 				<string>Talking to Redmine...</string>
 				<key>script</key>
-				<string>./alfred-redmine "$1" "{\"keyword\":\"status\"}"</string>
+				<string>./alfred-redmine "$1" "{\"keyword\":\"sync\"}"</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>subtext</key>
-				<string>Get current status</string>
+				<string>Sync with Redmine</string>
 				<key>title</key>
 				<string>rms</string>
 				<key>type</key>
@@ -640,6 +653,49 @@
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>4</integer>
+				<key>keyword</key>
+				<string>rmo</string>
+				<key>queuedelaycustom</key>
+				<integer>1</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<false/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Talking to Redmine...</string>
+				<key>script</key>
+				<string>./alfred-redmine "$1" "{\"keyword\":\"options\"}"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Set options</string>
+				<key>title</key>
+				<string>rmo</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>14A623DC-1133-4608-8697-C287512366AE</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
 	</array>
 	<key>readme</key>
 	<string>This workflow allows a user to interact with a Redmine server. Functions include listing projects and issues, as well as generating local time sheets.</string>
@@ -651,6 +707,13 @@
 			<integer>40</integer>
 			<key>ypos</key>
 			<integer>40</integer>
+		</dict>
+		<key>14A623DC-1133-4608-8697-C287512366AE</key>
+		<dict>
+			<key>xpos</key>
+			<integer>230</integer>
+			<key>ypos</key>
+			<integer>640</integer>
 		</dict>
 		<key>2264D33D-D74E-4270-8FB0-8F387519B6D2</key>
 		<dict>
